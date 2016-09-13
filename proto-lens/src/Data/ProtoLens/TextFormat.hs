@@ -30,7 +30,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as Lazy
-import Numeric (showHex)
+import Numeric (showOct)
 import Text.Parsec (parse)
 import Text.PrettyPrint
 
@@ -111,16 +111,26 @@ pprintFieldValue name BytesField x = pprintByteString name x
 pprintFieldValue name GroupField m
     = text name <+> lbrace $$ nest 2 (pprintMessage m) $$ rbrace
 
--- | Formats a string in a way that's consistent with C and Haskell escaping
--- conventions.  For strings with escape sequences, the output consists of
--- multiple string literals which are expected to be concatenated as C does.
+-- | Formats a string in a way that mostly matches the C-compatible escaping used by the Protobuf-Buffer distribution.  We depart a bit by escaping all non-ASCII characters, which depending on the locale, the distribution might not do.
+--
+-- This uses three-digit octal escapes, e.g. "\011" plus \n, \r,, \t, \', \",
+-- and \\ only.  Note that Haskell string-literal syntax calls for "\011" to be
+-- interpreted as decimal 11, rather than the decimal 9 it actually represent,
+-- so you can't use Prelude.read to parse the strings created here.
 pprintByteString :: String -> Data.ByteString.ByteString -> Doc
 pprintByteString name x = text name <> colon <+> char '\"'
     <> text (concatMap escape $ Data.ByteString.unpack x) <> char '\"'
-  where escape w8 | isPrint ch && isAscii ch = ch : ""
-                  | otherwise                = "\\x" ++ showHex w8 "\" \""
+  where escape w8 | ch == '\n'               = "\\n"
+                  | ch == '\r'               = "\\r"
+                  | ch == '\t'               = "\\t"
+                  | ch == '\"'               = "\\\""
+                  | ch == '\''               = "\\\'"
+                  | ch == '\\'               = "\\\\"
+                  | isPrint ch && isAscii ch = ch : ""
+                  | otherwise                = "\\" ++ pad (showOct w8 "")
           where
             ch = chr $ fromIntegral w8
+            pad str = replicate (3 - length str) '0' ++ str
 
 primField :: Show value => String -> value -> Doc
 primField name x = text name <> colon <+> text (show x)

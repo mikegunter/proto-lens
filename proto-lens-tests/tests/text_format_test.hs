@@ -80,9 +80,18 @@ main = testMain
           kExpected @=? showMessageShort (def4 & d .~ kNums)
     ]
   where
-    escapeMessage  = def2 & b .~ ("abc\x12" <> "a\x1\x0")
-    escapeRendered = "b: \"abc\\x12\" \"a\\x1\" \"\\x0\" \"\""
+    escapeMessage  = def2 & b
+        .~ ("a\r\n\t\"\'\\" <> "bc\o030" <> "1" <> "\o109" <> "¢" <> "\o1")
+    escapeRendered =
+        -- All the special escapes:
+        "b: \"a\\r\\n\\t\\\"\\\'\\\\"
+        ++ "bc\\0301"      -- The last digit is a separate character, not part
+                           -- of the escape.
+        ++ "\\010" ++ "9"  -- Note that the 9 is a separate character
+        ++ "\\302\\242"    -- UTF-8 for the cent symbol, '¢'.
+        ++ "\\001"         -- Works fine at EOL.
+        ++ "\""
     invalidUTF8BytesMessage =
-        def5 & e .~ Data.ByteString.pack (map (fromIntegral . ord) "abc\x0G\x1"
-            ++ [0x80::Word8])
-    invalidUTF8BytesRendered = "e: \"abc\\x0\" \"G\\x1\" \"\\x80\" \"\""
+        def5 & e .~ Data.ByteString.pack (map (fromIntegral . ord) "abc"
+            ++ [0xC0, 0xC0, 0x0])  -- Invalid UTF8.
+    invalidUTF8BytesRendered = "e: \"abc\\300\\300\\000\""
