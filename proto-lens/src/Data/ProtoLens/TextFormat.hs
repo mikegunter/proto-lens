@@ -227,9 +227,8 @@ makeValue BoolField (Parser.EnumValue x)
     | x == "true" = Right True
     | x == "false" = Right False
     | otherwise = Left $ "Unrecognized bool value " ++ show x
-makeValue StringField (Parser.StringValue x) = Right (Text.pack x)
-makeValue BytesField (Parser.StringValue x) =
-    Right (Data.ByteString.Char8.pack x)
+makeValue StringField (Parser.ByteStringValue x) = Right (Text.decodeUtf8 x)
+makeValue BytesField (Parser.ByteStringValue x) = Right x
 makeValue EnumField (Parser.IntValue x) =
     maybe (Left $ "Unrecognized enum value " ++ show x) Right
         (maybeToEnum $ fromInteger x)

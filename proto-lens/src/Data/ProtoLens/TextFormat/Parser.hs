@@ -14,12 +14,18 @@ module Data.ProtoLens.TextFormat.Parser
     , parser
     ) where
 
-import Data.List (intercalate)
+import Data.ByteString (ByteString, pack)
+import Data.Char (ord)
 import Data.Functor.Identity (Identity)
+import Data.List (intercalate)
+import Data.Maybe (catMaybes)
 import Data.Text.Lazy (Text)
-import Text.Parsec.Char (alphaNum, char, letter, oneOf)
+import Data.Word (Word8)
+import Numeric (readOct, readHex)
+import Text.Parsec.Char
+  (alphaNum, char, hexDigit, letter, octDigit, oneOf, satisfy)
 import Text.Parsec.Text.Lazy (Parser)
-import Text.Parsec.Combinator (eof, sepBy1, many1, choice)
+import Text.Parsec.Combinator (choice, eof, many1, optionMaybe, sepBy1)
 import Text.Parsec.Token
 import Control.Applicative ((<*), (<|>), (*>), many)
 import Control.Monad (liftM, liftM2, mzero)
@@ -60,7 +66,7 @@ data Key = Key String  -- ^ A standard key that is just a string.
 
 data Value = IntValue Integer  -- ^ An integer
   | DoubleValue Double  -- ^ Any floating point number
-  | StringValue String  -- ^ A string literal
+  | ByteStringValue ByteString    -- ^ A string literal or "bytes" literal
   | MessageValue Message  -- ^ A sub message
   | EnumValue String  -- ^ Any undelimited string (including false & true)
   deriving (Show,Ord,Eq)
@@ -91,7 +97,8 @@ parser = whiteSpace ptp *> parseMessage <* eof
         negative <- (symbol ptp "-" >> return True) <|> return False
         value <- naturalOrFloat ptp
         return $ makeNumberValue negative value
-    parseString = liftM (StringValue . concat) . many1 $ stringLiteral ptp
+    parseString = liftM (ByteStringValue . mconcat)
+        $ many1 $ lexeme ptp $ cStringLiteral
     parseEnumValue = liftM EnumValue (identifier ptp)
     parseMessageValue = liftM MessageValue
         (braces ptp parseMessage <|> angles ptp parseMessage)
@@ -101,3 +108,59 @@ parser = whiteSpace ptp *> parseMessage <* eof
     makeNumberValue False (Left intValue) = IntValue intValue
     makeNumberValue True (Right doubleValue) = DoubleValue (negate doubleValue)
     makeNumberValue False (Right doubleValue) = DoubleValue doubleValue
+
+
+cStringLiteral :: Parser ByteString
+cStringLiteral = do
+    initialQuoteChar <- char '\'' <|> char '\"'
+    word8s <- many stringChar
+    char initialQuoteChar
+    return (pack word8s)
+  where
+    stringChar :: Parser Word8
+    stringChar = nonEscape <|> stringEscape
+    nonEscape  = fmap (fromIntegral . ord)
+        $ satisfy (\c -> c `notElem` "\\\'\"" && ord c < 256)
+    stringEscape = char '\\' >> (octal <|> hex <|> unicode <|> simple)
+    octal = do d0 <- octDigit
+               d1 <- optionMaybe octDigit
+               d2 <- optionMaybe octDigit
+               readMaybeDigits readOct [Just d0, d1, d2]
+    readMaybeDigits :: ReadS Word8 -> [Maybe Char] -> Parser Word8
+    readMaybeDigits reader
+        = return . (\str -> let [(v, "")] = reader str in v) . catMaybes
+    hex = do oneOf "xX"
+             d0 <- hexDigit
+             d1 <- optionMaybe hexDigit
+             readMaybeDigits readHex [Just d0, d1]
+    unicode = oneOf "uU" >> fail "Unicode in string literals not yet supported"
+    simple = choice $ map charRet [ ('a', '\a')
+                                  , ('b', '\b')
+                                  , ('f', '\f')
+                                  , ('n', '\n')
+                                  , ('r', '\r')
+                                  , ('t', '\t')
+                                  , ('v', '\v')
+                                  , ('\\', '\\')
+                                  , ('\'', '\'')
+                                  , ('\"', '\"')
+                                  ]
+      where
+        charRet :: (Char, Char) -> Parser Word8
+        charRet (escapeCh, ch) = do char escapeCh
+                                    return $ fromIntegral $ ord ch
+
+
+notDone = error . ("Not done: " ++)
+
+
+{-
+
+    number predicate               oct
+    oneToAtMost n p = do x0 <- p
+                         more (n - 1) [x0]
+      where
+        more i revXs | i < 1     = return $ reverse revXs
+                     | otherwise = p >>= more (i - 1) . (: revXs)
+
+-}
