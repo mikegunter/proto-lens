@@ -98,7 +98,7 @@ parser = whiteSpace ptp *> parseMessage <* eof
         value <- naturalOrFloat ptp
         return $ makeNumberValue negative value
     parseString = liftM (ByteStringValue . mconcat)
-        $ many1 $ lexeme ptp $ cStringLiteral
+        $ many1 $ lexeme ptp $ protoStringLiteral
     parseEnumValue = liftM EnumValue (identifier ptp)
     parseMessageValue = liftM MessageValue
         (braces ptp parseMessage <|> angles ptp parseMessage)
@@ -109,9 +109,15 @@ parser = whiteSpace ptp *> parseMessage <* eof
     makeNumberValue True (Right doubleValue) = DoubleValue (negate doubleValue)
     makeNumberValue False (Right doubleValue) = DoubleValue doubleValue
 
-
-cStringLiteral :: Parser ByteString
-cStringLiteral = do
+-- | Reads a literal string the way the Protobuf distribution's tokenizer.cc
+-- does.  This differs from Haskell string literals in treating, e.g. "\11" as
+-- octal instead of decimal, so reading 9 instead of 11.  Also, like
+-- tokenizer.cc we assume octal and hex escapes can have at most three and two
+-- digits, respectively.
+--
+-- TODO: implement reading of Unicode escapes.
+protoStringLiteral :: Parser ByteString
+protoStringLiteral = do
     initialQuoteChar <- char '\'' <|> char '\"'
     word8s <- many stringChar
     char initialQuoteChar
@@ -149,18 +155,3 @@ cStringLiteral = do
         charRet :: (Char, Char) -> Parser Word8
         charRet (escapeCh, ch) = do char escapeCh
                                     return $ fromIntegral $ ord ch
-
-
-notDone = error . ("Not done: " ++)
-
-
-{-
-
-    number predicate               oct
-    oneToAtMost n p = do x0 <- p
-                         more (n - 1) [x0]
-      where
-        more i revXs | i < 1     = return $ reverse revXs
-                     | otherwise = p >>= more (i - 1) . (: revXs)
-
--}
