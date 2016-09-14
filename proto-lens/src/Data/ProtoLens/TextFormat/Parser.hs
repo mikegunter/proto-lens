@@ -26,7 +26,7 @@ import Text.Parsec.Char
   (alphaNum, char, hexDigit, letter, octDigit, oneOf, satisfy)
 import Text.Parsec.Text.Lazy (Parser)
 import Text.Parsec.Combinator (choice, eof, many1, optionMaybe, sepBy1)
-import Text.Parsec.Token
+import Text.Parsec.Token hiding (octal)
 import Control.Applicative ((<*), (<|>), (*>), many)
 import Control.Monad (liftM, liftM2, mzero)
 
@@ -111,7 +111,7 @@ parser = whiteSpace ptp *> parseMessage <* eof
 
 -- | Reads a literal string the way the Protocol Buffer distribution's
 -- tokenizer.cc does.  This differs from Haskell string literals in treating,
--- e.g. "\11" as octal instead of decimal, so reading 9 instead of 11.  Also,
+-- e.g. "\11" as octal instead of decimal, so reading as 9 instead of 11.  Also,
 -- like tokenizer.cc we assume octal and hex escapes can have at most three and
 -- two digits, respectively.
 --
@@ -120,7 +120,7 @@ protoStringLiteral :: Parser ByteString
 protoStringLiteral = do
     initialQuoteChar <- char '\'' <|> char '\"'
     word8s <- many stringChar
-    char initialQuoteChar
+    _ <- char initialQuoteChar
     return (pack word8s)
   where
     stringChar :: Parser Word8
@@ -135,7 +135,7 @@ protoStringLiteral = do
     readMaybeDigits :: ReadS Word8 -> [Maybe Char] -> Parser Word8
     readMaybeDigits reader
         = return . (\str -> let [(v, "")] = reader str in v) . catMaybes
-    hex = do oneOf "xX"
+    hex = do _ <- oneOf "xX"
              d0 <- hexDigit
              d1 <- optionMaybe hexDigit
              readMaybeDigits readHex [Just d0, d1]
@@ -153,5 +153,5 @@ protoStringLiteral = do
                                   ]
       where
         charRet :: (Char, Char) -> Parser Word8
-        charRet (escapeCh, ch) = do char escapeCh
+        charRet (escapeCh, ch) = do _ <- char escapeCh
                                     return $ fromIntegral $ ord ch

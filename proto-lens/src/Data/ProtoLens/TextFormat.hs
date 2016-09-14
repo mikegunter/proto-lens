@@ -21,13 +21,11 @@ import Lens.Family2 ((&),(^.),(.~), set, over)
 import Control.Applicative ((<$>))
 import Control.Arrow (left)
 import qualified Data.ByteString
-import qualified Data.ByteString.Char8
 import Data.Char (isPrint, isAscii, chr)
 import Data.Foldable (foldlM, foldl')
 import Data.Maybe (catMaybes)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as Lazy
 import Numeric (showOct)
