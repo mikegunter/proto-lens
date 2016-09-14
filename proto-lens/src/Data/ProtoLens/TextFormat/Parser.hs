@@ -66,7 +66,7 @@ data Key = Key String  -- ^ A standard key that is just a string.
 
 data Value = IntValue Integer  -- ^ An integer
   | DoubleValue Double  -- ^ Any floating point number
-  | ByteStringValue ByteString    -- ^ A string literal or "bytes" literal
+  | ByteStringValue ByteString    -- ^ A string or bytes literal
   | MessageValue Message  -- ^ A sub message
   | EnumValue String  -- ^ Any undelimited string (including false & true)
   deriving (Show,Ord,Eq)
