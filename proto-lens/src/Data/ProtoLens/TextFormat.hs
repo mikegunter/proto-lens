@@ -111,7 +111,10 @@ pprintFieldValue name BytesField x = pprintByteString name x
 pprintFieldValue name GroupField m
     = text name <+> lbrace $$ nest 2 (pprintMessage m) $$ rbrace
 
--- | Formats a string in a way that mostly matches the C-compatible escaping used by the Protobuf-Buffer distribution.  We depart a bit by escaping all non-ASCII characters, which depending on the locale, the distribution might not do.
+-- | Formats a string in a way that mostly matches the C-compatible escaping
+-- used by the Protobuf-Buffer distribution.  We depart a bit by escaping all
+-- non-ASCII characters, which depending on the locale, the distribution might
+-- not do.
 --
 -- This uses three-digit octal escapes, e.g. "\011" plus \n, \r,, \t, \', \",
 -- and \\ only.  Note that Haskell string-literal syntax calls for "\011" to be
