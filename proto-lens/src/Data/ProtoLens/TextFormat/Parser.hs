@@ -121,7 +121,7 @@ protoStringLiteral = do
     initialQuoteChar <- char '\'' <|> char '\"'
     word8s <- many stringChar
     _ <- char initialQuoteChar
-    return (pack word8s)
+    return $ pack word8s
   where
     stringChar :: Parser Word8
     stringChar = nonEscape <|> stringEscape
