@@ -76,6 +76,8 @@ main = testMain
                (Just escapeMessage) (Data.Text.Lazy.pack escapeRendered)
     , testCase "Render bytes" $
          invalidUTF8BytesRendered @=? showMessage invalidUTF8BytesMessage
+    , readFrom "Parse single-quote-delimited string"
+         (Just $ def2 & b .~ "ab\o2") "b: \'ab\2\'"
     , readFrom "Non-UTF8 bytes"
          (Just invalidUTF8BytesMessage)
          (Data.Text.Lazy.pack invalidUTF8BytesRendered)
