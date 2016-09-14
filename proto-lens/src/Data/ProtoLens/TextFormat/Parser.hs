@@ -109,11 +109,11 @@ parser = whiteSpace ptp *> parseMessage <* eof
     makeNumberValue True (Right doubleValue) = DoubleValue (negate doubleValue)
     makeNumberValue False (Right doubleValue) = DoubleValue doubleValue
 
--- | Reads a literal string the way the Protobuf distribution's tokenizer.cc
--- does.  This differs from Haskell string literals in treating, e.g. "\11" as
--- octal instead of decimal, so reading 9 instead of 11.  Also, like
--- tokenizer.cc we assume octal and hex escapes can have at most three and two
--- digits, respectively.
+-- | Reads a literal string the way the Protocol Buffer distribution's
+-- tokenizer.cc does.  This differs from Haskell string literals in treating,
+-- e.g. "\11" as octal instead of decimal, so reading 9 instead of 11.  Also,
+-- like tokenizer.cc we assume octal and hex escapes can have at most three and
+-- two digits, respectively.
 --
 -- TODO: implement reading of Unicode escapes.
 protoStringLiteral :: Parser ByteString
