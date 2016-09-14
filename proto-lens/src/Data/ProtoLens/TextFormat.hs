@@ -112,7 +112,7 @@ pprintFieldValue name GroupField m
     = text name <+> lbrace $$ nest 2 (pprintMessage m) $$ rbrace
 
 -- | Formats a string in a way that mostly matches the C-compatible escaping
--- used by the Protocol-Buffer distribution.  We depart a bit by escaping all
+-- used by the Protocol Buffer distribution.  We depart a bit by escaping all
 -- non-ASCII characters, which depending on the locale, the distribution might
 -- not do.
 --
